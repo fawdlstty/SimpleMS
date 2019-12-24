@@ -1,4 +1,5 @@
 ﻿using Fawdlstty.SimpleMS.Options;
+using Fawdlstty.SimpleMS.PrivateData;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Reflection;
@@ -17,11 +18,9 @@ namespace Fawdlstty.SimpleMS.Client {
 			var _option = new ServiceUpdateOption ();
 			option?.Invoke (_option);
 			if (_option.GatewayAddrs.Count == 0)
-				throw new ArgumentException ("网关");
+				throw new ArgumentException ("网关数量不可为0");
 
-			// TODO: 枚举接口
-			Assembly.GetExecutingAssembly ().GetTypes ()
-			// TODO: 创建访问对象
+			TypeData.InitInterfaces ();
 			return services;
 		}
 	}

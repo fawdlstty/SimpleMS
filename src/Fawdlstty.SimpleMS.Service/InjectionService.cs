@@ -8,7 +8,9 @@ namespace Fawdlstty.SimpleMS.Service {
 	public static class InjectionService {
 		public static IServiceCollection AddSimpleMSService (this IServiceCollection services) {
 			// 初始化注册列表
-			services.AddSimpleMSClient ();
+			services.AddSimpleMSClient ((option) => {
+
+			});
 
 			// TODO: 枚举实例类并创建中转对象
 
