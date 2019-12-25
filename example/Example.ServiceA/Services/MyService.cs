@@ -9,5 +9,7 @@ namespace Example.ServiceA.Services {
 		public string Hello () {
 			return "hello ServiceA";
 		}
+		//public void Hello1 (string hello) {
+		//}
 	}
 }

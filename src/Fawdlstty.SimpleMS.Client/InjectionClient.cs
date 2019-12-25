@@ -1,5 +1,5 @@
 ﻿using Fawdlstty.SimpleMS.Options;
-using Fawdlstty.SimpleMS.PrivateData;
+using Fawdlstty.SimpleMS.Private;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Reflection;
