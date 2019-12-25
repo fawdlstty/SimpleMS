@@ -53,14 +53,28 @@ namespace Fawdlstty.SimpleMS.Private {
 							if (_methods.Count () > 1) {
 								// 存在参数数量及返回类型相同的函数，根据参数类型再次筛选
 								foreach (var _tmp_method in _methods) {
-
+									var _params1 = (from p in _method_info_interface.GetParameters () select p.ParameterType).ToArray ();
+									var _params2 = (from p in _tmp_method.GetParameters () select p.ParameterType).ToArray ();
+									bool _match = true;
+									for (int i = 0; i < _params1.Length; ++i) {
+										if (_params1 [i] != _params2 [i]) {
+											_match = false;
+											break;
+										}
+									}
+									if (_match) {
+										_method_info = _tmp_method;
+										break;
+									}
 								}
 							}
 						}
+						if (_method_info == null)
+							_method_info = _methods.First ();
 
 						// 创建降级处理函数
 						var _deg_func = _method_info.GetCustomAttribute<ServiceDegradationAttribute> ().DegradationFunc;
-						_create_deg_method (_child_type_builder, );
+						_create_deg_method (_child_type_builder, _method_info, _deg_func);
 					}
 				}
 
@@ -121,15 +135,25 @@ namespace Fawdlstty.SimpleMS.Private {
 			var _method_builder = _type_builder.DefineMethod (_parent_method_info.Name, _method_attr, CallingConventions.Standard, _parent_method_info.ReturnType, _param_types);
 			_type_builder.DefineMethodOverride (_method_builder, _parent_method_info);
 			var _il_generator = _method_builder.GetILGenerator ();
-			// TODO:
-			_il_generator.Emit (OpCodes.Ldstr, "hello");
+			// try {
+			_il_generator.BeginExceptionBlock ();
+
+			// } catch (Exception) {       ????
+			_il_generator.BeginCatchBlock (typeof (Exception));
+			var _exception = _il_generator.DeclareLocal (typeof (Exception));
+			_il_generator.Emit (OpCodes.Stloc, _exception);
+
+			// }
+			_il_generator.EndExceptionBlock ();
+
+
 			_il_generator.Emit (OpCodes.Ret);
 		}
 
 		// 创建只读属性
 		private static void _add_readonly_property (TypeBuilder _type_builder, string _prop_name, string _prop_value) {
 			var _method_attr = MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.Virtual;
-			var _method_builder = _type_builder.DefineMethod ($"_faw_get__{_prop_name}_" + _prop_name, _method_attr, typeof (string), Type.EmptyTypes);
+			var _method_builder = _type_builder.DefineMethod ($"get_{_prop_name}" + _prop_name, _method_attr, typeof (string), Type.EmptyTypes);
 			var _il_generator = _method_builder.GetILGenerator ();
 			if (_prop_value == null) {
 				_il_generator.Emit (OpCodes.Ldnull);
