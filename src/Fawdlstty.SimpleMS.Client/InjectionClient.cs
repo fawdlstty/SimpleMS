@@ -20,7 +20,7 @@ namespace Fawdlstty.SimpleMS.Client {
 			if (_option.GatewayAddrs.Count == 0)
 				throw new ArgumentException ("网关数量不可为0");
 
-			TypeData.InitInterfaces ();
+			ImplTypeBuilder.InitInterfaces ();
 			return services;
 		}
 	}

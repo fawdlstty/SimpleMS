@@ -5,6 +5,6 @@ using System.Text;
 
 namespace Fawdlstty.SimpleMS.Attributes {
 	public class ServiceDegradationAttribute: Attribute {
-		public Func<Type [], object [], Type, object> DegradationFunc { get; set; } = Degradation.DefaultFunc;
+		public Func<Dictionary<string, object>, Type, object> DegradationFunc { get; set; } = Degradation.DefaultFunc;
 	}
 }
