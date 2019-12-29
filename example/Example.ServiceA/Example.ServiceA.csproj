@@ -11,7 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Fawdlstty.SimpleMS.Service\Fawdlstty.SimpleMS.Service.csproj" />
+    <ProjectReference Include="..\..\src\Fawdlstty.SimpleMS\Fawdlstty.SimpleMS.csproj" />
     <ProjectReference Include="..\Example.Interface\Example.Interface.csproj" />
   </ItemGroup>
 
