@@ -8,6 +8,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -33,15 +34,27 @@ namespace Fawdlstty.SimpleMS {
 					foreach (var (_key, _obj) in Singletons.CallerMap) {
 						if (!_key.Item1.StartsWith (_module))
 							continue;
-						// 调用
+						// 获取调用函数
 						var _method_name = _ctx.Request.Query ["method"].ToString ();
 						var _method = _key.Item2.GetMethod (_method_name);
 						if (_method == null) {
-							await _ctx.Response.WriteAsync ($"方法 {_method_name} 不存在");
+							await _ctx.Response.WriteAsync (JsonConvert.SerializeObject (new { result = "failure", reason = $"方法 {_method_name} 不存在" }));
 							return;
 						}
-						// TODO: 生成参数列表并传参
-						var _ret = _method.Invoke (_obj, );
+
+						// 获取参数内容
+						var _bytes = new byte [_ctx.Request.ContentLength ?? 0];
+						await _ctx.Request.Body.ReadAsync (_bytes);
+						JObject _param_obj = JObject.Parse (Encoding.UTF8.GetString (_bytes));
+
+						// 生成参数列表并调用
+						var _param_infos = _method.GetParameters ();
+						object [] _params = new object [_param_infos?.Length ?? 0];
+						for (int i = 0; i < _params.Length; ++i)
+							_params [i] = _param_obj [_param_infos [i].Name].ToObject (_param_infos [i].ParameterType);
+						var _ret = _method.Invoke (_obj, _params);
+
+						// 等待函数运行结束并返回
 						if (_method.ReturnType == typeof (Task)) {
 							await (Task) _ret;
 							await _ctx.Response.WriteAsync (JsonConvert.SerializeObject (new { result = "success" }));

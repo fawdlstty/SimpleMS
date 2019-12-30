@@ -5,13 +5,15 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Fawdlstty.SimpleMS.Private {
-	internal class ImplTypeBuilder {
+	public class ImplTypeBuilder {
 		private static bool s_init = true;
 
 		// 初始化接口信息
@@ -104,6 +106,33 @@ namespace Fawdlstty.SimpleMS.Private {
 			return (_local, _remote);
 		}
 
+		// 获取所有接口 TODO: 修改类访问属性与函数访问属性
+		public static List<Type> _get_all_types () {
+			var _path = Path.GetDirectoryName (Assembly.GetExecutingAssembly ().Location);
+			var _ignores_pattern = string.Format ("^Microsoft\\.\\w*|^System\\.\\w*|^Newtonsoft\\.\\w*");
+			Regex _ignores = new Regex (_ignores_pattern, RegexOptions.Singleline | RegexOptions.Compiled | RegexOptions.IgnoreCase);
+			var _files = Directory.GetFiles (_path, "*.dll").Select (Path.GetFullPath).Where (a => !_ignores.IsMatch (Path.GetFileName (a))).ToList ();
+			//
+			//var refAssemblies = new List<Assembly>();
+			//var rootPath = AppContext.BaseDirectory;
+			//var paths = virtualPaths.Select(m => Path.Combine(rootPath, m)).ToList();
+			//    if (!existsPath) paths.Add(rootPath);
+			//    paths.ForEach(path =>
+			//    {
+			//        var assemblyFiles = GetAllAssemblyFiles(path);
+
+			//        foreach (var referencedAssemblyFile in assemblyFiles)
+			//        {
+			//            var referencedAssembly = Assembly.LoadFrom(referencedAssemblyFile);
+			//            if (!_referenceAssembly.Contains(referencedAssembly))
+			//                _referenceAssembly.Add(referencedAssembly);
+			//            refAssemblies.Add(referencedAssembly);
+			//        }
+			//        result = existsPath ? refAssemblies : _referenceAssembly;
+			//    });
+			return null;
+		}
+
 		// 创建中转函数
 		private static void _add_transcall_method (string _service_name, TypeBuilder _type_builder, MethodInfo _method_info, FieldBuilder _field_deg_funcs, FieldBuilder _field_return_types, int _index) {
 			var _method_attr = MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Virtual;
@@ -168,6 +197,7 @@ namespace Fawdlstty.SimpleMS.Private {
 			_code.Emit (OpCodes.Ret);
 		}
 
+		// 发送整型
 		private static void _emit_fast_int (ILGenerator _code, int _value) {
 			if (_value >= -1 && _value <= 8) {
 				switch (_value) {
