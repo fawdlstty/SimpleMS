@@ -1,6 +1,8 @@
 ﻿using Fawdlstty.SimpleMS.Attributes;
 using Fawdlstty.SimpleMS.Datum;
 using Fawdlstty.SimpleMS.Options;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,12 +15,13 @@ namespace Fawdlstty.SimpleMS.Private {
 		private static bool s_init = true;
 
 		// 初始化接口信息
-		public static void InitInterfaces (ServiceUpdateOption _option) {
+		public static (List<string>, List<string>) InitInterfaces (ServiceUpdateOption _option) {
 			if (s_init) {
 				s_init = false;
 			} else {
 				throw new NotSupportedException ("请确保 services.AddSimpleMSClient () 与 services.AddSimpleMSService () 一共只被调用一次");
 			}
+			List<string> _local = new List<string> (), _remote = new List<string> ();
 
 			// 枚举所有接口
 			var _types = Assembly.GetExecutingAssembly ().GetTypes ();
@@ -29,6 +32,10 @@ namespace Fawdlstty.SimpleMS.Private {
 				if (!_type.IsInterface)
 					throw new TypeLoadException ("具有 [ServiceMethod] 标注的类必须为接口类型");
 
+				// 获取接口服务名称
+				string _name = _type.FullName.Replace ('.', '_');
+				string _service_name = _type.GetServiceName ();
+
 				// 如果需要，那么搜索本地模块
 				var _type_impls = (from p in _types where p.BaseType == _type select p);
 				if (_type_impls.Count () > 1)
@@ -36,11 +43,15 @@ namespace Fawdlstty.SimpleMS.Private {
 				object _impl_o = null;
 				if (_type_impls.Any ()) {
 					// 从本地模块加载
+					_local.Add (_service_name);
+
+					// 创建实例
 					_impl_o = Activator.CreateInstance (_type_impls.First ());
 				} else {
 					// 从外部模块加载
+					_remote.Add (_service_name);
+
 					// 创建类生成器
-					string _name = _type.FullName.Replace ('.', '_');
 					var _assembly_name = new AssemblyName ($"_faw_assembly__{_name}_");
 					var _assembly_builder = AssemblyBuilder.DefineDynamicAssembly (_assembly_name, AssemblyBuilderAccess.Run);
 					var _module_builder = _assembly_builder.DefineDynamicModule ($"_faw_module__{_name}_");
@@ -50,11 +61,11 @@ namespace Fawdlstty.SimpleMS.Private {
 					var _constructor_builder = _type_builder.DefineConstructor (MethodAttributes.Public, CallingConventions.Standard, Array.Empty<Type> ());
 					_constructor_builder.GetILGenerator ().Emit (OpCodes.Ret);
 
-					// 定义存储降级函数的结构
+					// 定义存储降级函数的字段
 					var _deg_funcs = new List<Func<Dictionary<string, object>, Type, Task>> ();
 					var _field_deg_funcs = _type_builder.DefineField ("_faw_field__deg_funcs_", typeof (List<Func<Dictionary<string, object>, Type, object>>), FieldAttributes.Private);
 
-					// 定义存储返回类型的结构
+					// 定义存储返回类型的字段
 					var _return_types = new List<Type> ();
 					var _field_return_types = _type_builder.DefineField ("_faw_field__return_types_", typeof (List<Type>), FieldAttributes.Private);
 
@@ -76,10 +87,10 @@ namespace Fawdlstty.SimpleMS.Private {
 						var _deg_func = _method_infos [i].GetCustomAttribute<ServiceDegradationAttribute> ()?.DegradationFunc;
 						_deg_funcs.Add (_deg_func);
 						_return_types.Add (_method_infos [i].ReturnType);
-						_add_transcall_method (_name, _type_builder, _method_infos [i], _field_deg_funcs, _field_return_types, i);
+						_add_transcall_method (_service_name, _type_builder, _method_infos [i], _field_deg_funcs, _field_return_types, i);
 					}
 
-					// 处理类型
+					// 创建实例
 					var _impl_type = _type_builder.CreateType ();
 					_impl_o = Activator.CreateInstance (_impl_type);
 					_impl_type.InvokeMember ("_faw_field__deg_funcs_", BindingFlags.SetField, null, _impl_o, new [] { _deg_funcs });
@@ -87,19 +98,21 @@ namespace Fawdlstty.SimpleMS.Private {
 				}
 
 				// 添加进处理对象
-				Singletons.InterfaceMap.Add (_type, _impl_o);
+				Singletons.CallerMap.Add ((_service_name, _type), _impl_o);
 			}
+
+			return (_local, _remote);
 		}
 
 		// 创建中转函数
-		private static void _add_transcall_method (string _name, TypeBuilder _type_builder, MethodInfo _method_info, FieldBuilder _field_deg_funcs, FieldBuilder _field_return_types, int _index) {
+		private static void _add_transcall_method (string _service_name, TypeBuilder _type_builder, MethodInfo _method_info, FieldBuilder _field_deg_funcs, FieldBuilder _field_return_types, int _index) {
 			var _method_attr = MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Virtual;
 			var _param_types = (from p in _method_info.GetParameters () select p.ParameterType).ToArray ();
 			var _method_builder = _type_builder.DefineMethod (_method_info.Name, _method_attr, CallingConventions.Standard, _method_info.ReturnType, _param_types);
 			_type_builder.DefineMethodOverride (_method_builder, _method_info);
 			var _code = _method_builder.GetILGenerator ();
 
-			// 参数1：参数列表
+			// 参数2：参数列表
 			var _map = _code.DeclareLocal (typeof (Dictionary<string, object>));
 			_code.Emit (OpCodes.Newobj, typeof (Dictionary<string, object>).GetConstructor (Type.EmptyTypes));
 			_code.Emit (OpCodes.Stloc, _map);
@@ -109,14 +122,24 @@ namespace Fawdlstty.SimpleMS.Private {
 			for (int i = 0; i < _param_infos.Length; ++i) {
 				_code.Emit (OpCodes.Ldloc, _map);
 				_code.Emit (OpCodes.Ldstr, _param_infos [i].Name);
-				_emit_load_arg (_code, i);
+				if (i == 0) {
+					_code.Emit (OpCodes.Ldarg_1);
+				} else if (i == 1) {
+					_code.Emit (OpCodes.Ldarg_2);
+				} else if (i == 2) {
+					_code.Emit (OpCodes.Ldarg_3);
+				} else if (i <= 126) {
+					_code.Emit (OpCodes.Ldarg_S, (byte) i + 1);
+				} else {
+					_code.Emit (OpCodes.Ldarg, i + 1);
+				}
 				if (_param_infos [i].ParameterType.IsValueType)
 					_code.Emit (OpCodes.Box, _param_infos [i].ParameterType);
 				_code.EmitCall (OpCodes.Callvirt, _param_add, new Type [] { typeof (string), typeof (object) });
 				_param_hash ^= _param_infos [i].ParameterType.GetHashCode ();
 			}
 
-			// 参数2：降级函数
+			// 参数3：降级函数
 			var _deg_func = _code.DeclareLocal (typeof (Func<Dictionary<string, object>, Type, object>));
 			_code.Emit (OpCodes.Ldarg_0);
 			_code.Emit (OpCodes.Ldfld, _field_deg_funcs);
@@ -125,7 +148,7 @@ namespace Fawdlstty.SimpleMS.Private {
 			_code.EmitCall (OpCodes.Callvirt, _list_get_Item_deg_func, new Type [] { typeof (int) });
 			_code.Emit (OpCodes.Stloc, _deg_func);
 
-			// 参数3：返回类型
+			// 参数4：返回类型
 			var _return_type = _code.DeclareLocal (typeof (Type));
 			_code.Emit (OpCodes.Ldarg_0);
 			_code.Emit (OpCodes.Ldfld, _field_return_types);
@@ -135,43 +158,14 @@ namespace Fawdlstty.SimpleMS.Private {
 			_code.Emit (OpCodes.Stloc, _return_type);
 
 			// 转发请求并返回
-			_code.Emit (OpCodes.Ldstr, $"{_name}_{_param_hash.GetHashCode ()}");
+			_code.Emit (OpCodes.Ldstr, _service_name);
+			_code.Emit (OpCodes.Ldstr, _method_info.Name);
 			_code.Emit (OpCodes.Ldloc, _map);
 			_code.Emit (OpCodes.Ldloc, _deg_func);
 			_code.Emit (OpCodes.Ldloc, _return_type);
 			var _impl_invoke_method = typeof (ImplCaller).GetMethod ("invoke_method");
-			_code.EmitCall (OpCodes.Call, _impl_invoke_method, new Type [] { typeof (string), typeof (Dictionary<string, object>), typeof (Func<Dictionary<string, object>, Type, object>), typeof (Type) });
+			_code.EmitCall (OpCodes.Call, _impl_invoke_method, new Type [] { typeof (string), typeof (string), typeof (Dictionary<string, object>), typeof (Func<Dictionary<string, object>, Type, object>), typeof (Type) });
 			_code.Emit (OpCodes.Ret);
-		}
-
-		// 创建只读属性
-		private static void _add_readonly_property (TypeBuilder _type_builder, string _prop_name, string _prop_value) {
-			var _method_attr = MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.Virtual;
-			var _method_builder = _type_builder.DefineMethod ($"get_{_prop_name}" + _prop_name, _method_attr, typeof (string), Type.EmptyTypes);
-			var _code = _method_builder.GetILGenerator ();
-			if (_prop_value == null) {
-				_code.Emit (OpCodes.Ldnull);
-			} else {
-				_code.Emit (OpCodes.Ldstr, _prop_value);
-			}
-			_code.Emit (OpCodes.Ret);
-			//
-			var _prop_builder = _type_builder.DefineProperty (_prop_name, PropertyAttributes.None, typeof (string), Type.EmptyTypes);
-			_prop_builder.SetGetMethod (_method_builder);
-		}
-
-		private static void _emit_load_arg (ILGenerator _code, int _index) {
-			if (_index == 0) {
-				_code.Emit (OpCodes.Ldarg_1);
-			} else if (_index == 1) {
-				_code.Emit (OpCodes.Ldarg_2);
-			} else if (_index == 2) {
-				_code.Emit (OpCodes.Ldarg_3);
-			} else if (_index <= 126) {
-				_code.Emit (OpCodes.Ldarg_S, (byte) _index + 1);
-			} else {
-				_code.Emit (OpCodes.Ldarg, _index + 1);
-			}
 		}
 
 		private static void _emit_fast_int (ILGenerator _code, int _value) {
