@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 
 namespace Example.ServiceB.Services {
 	public class MyService: IMyService {
-		public string Hello () {
-			return "hello ServiceB";
+		public Task<string> Hello () {
+			return Task.FromResult ("hello ServiceB");
 		}
 	}
 }

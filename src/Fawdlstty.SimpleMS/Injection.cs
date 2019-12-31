@@ -34,6 +34,7 @@ namespace Fawdlstty.SimpleMS {
 					foreach (var (_key, _obj) in Singletons.CallerMap) {
 						if (!_key.Item1.StartsWith (_module))
 							continue;
+
 						// 获取调用函数
 						var _method_name = _ctx.Request.Query ["method"].ToString ();
 						var _method = _key.Item2.GetMethod (_method_name);

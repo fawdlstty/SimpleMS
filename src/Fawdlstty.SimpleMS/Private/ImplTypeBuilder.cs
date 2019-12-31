@@ -13,7 +13,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Fawdlstty.SimpleMS.Private {
-	public class ImplTypeBuilder {
+	internal class ImplTypeBuilder {
 		private static bool s_init = true;
 
 		// 初始化接口信息
@@ -26,7 +26,7 @@ namespace Fawdlstty.SimpleMS.Private {
 			List<string> _local = new List<string> (), _remote = new List<string> ();
 
 			// 枚举所有接口
-			var _types = Assembly.GetExecutingAssembly ().GetTypes ();
+			var _types = _get_all_types ();
 			foreach (var _type in _types) {
 				var _type_attr = _type.GetCustomAttribute<ServiceMethodAttribute> ();
 				if (_type_attr == null)
@@ -95,8 +95,8 @@ namespace Fawdlstty.SimpleMS.Private {
 					// 创建实例
 					var _impl_type = _type_builder.CreateType ();
 					_impl_o = Activator.CreateInstance (_impl_type);
-					_impl_type.InvokeMember ("_faw_field__deg_funcs_", BindingFlags.SetField, null, _impl_o, new [] { _deg_funcs });
-					_impl_type.InvokeMember ("_faw_field__return_types_", BindingFlags.SetField, null, _impl_o, new [] { _return_types });
+					_impl_type.InvokeMember ("_faw_field__deg_funcs_", BindingFlags.SetProperty, null, _impl_o, new [] { _deg_funcs });
+					_impl_type.InvokeMember ("_faw_field__return_types_", BindingFlags.SetProperty, null, _impl_o, new [] { _return_types });
 				}
 
 				// 添加进处理对象
@@ -106,31 +106,59 @@ namespace Fawdlstty.SimpleMS.Private {
 			return (_local, _remote);
 		}
 
-		// 获取所有接口 TODO: 修改类访问属性与函数访问属性
-		public static List<Type> _get_all_types () {
+		// 获取所有接口
+		private static List<Type> _get_all_types () {
 			var _path = Path.GetDirectoryName (Assembly.GetExecutingAssembly ().Location);
 			var _ignores_pattern = string.Format ("^Microsoft\\.\\w*|^System\\.\\w*|^Newtonsoft\\.\\w*");
 			Regex _ignores = new Regex (_ignores_pattern, RegexOptions.Singleline | RegexOptions.Compiled | RegexOptions.IgnoreCase);
 			var _files = Directory.GetFiles (_path, "*.dll").Select (Path.GetFullPath).Where (a => !_ignores.IsMatch (Path.GetFileName (a))).ToList ();
-			//
-			//var refAssemblies = new List<Assembly>();
-			//var rootPath = AppContext.BaseDirectory;
-			//var paths = virtualPaths.Select(m => Path.Combine(rootPath, m)).ToList();
-			//    if (!existsPath) paths.Add(rootPath);
-			//    paths.ForEach(path =>
-			//    {
-			//        var assemblyFiles = GetAllAssemblyFiles(path);
+			bool _change = false;
+			foreach (var _file in _files) {
+				try {
+					var _asm = Assembly.LoadFrom (_file);
+					if (!s_asms.Contains (_asm)) {
+						_change = true;
+						s_asms.Add (_asm);
+						s_types.AddRange (_asm.GetTypes ());
+					}
+				} catch (Exception) {
+				}
+			}
+			if (_change)
+				s_types = s_types.Distinct ().ToList ();
+			return s_types;
+		}
 
-			//        foreach (var referencedAssemblyFile in assemblyFiles)
-			//        {
-			//            var referencedAssembly = Assembly.LoadFrom(referencedAssemblyFile);
-			//            if (!_referenceAssembly.Contains(referencedAssembly))
-			//                _referenceAssembly.Add(referencedAssembly);
-			//            refAssemblies.Add(referencedAssembly);
-			//        }
-			//        result = existsPath ? refAssemblies : _referenceAssembly;
-			//    });
-			return null;
+		private static List<Assembly> s_asms = new List<Assembly> ();
+		private static List<Type> s_types = new List<Type> ();
+
+		// 创建属性
+		private static void _add_property<T> (TypeBuilder _type_builder, string _name) where T : class {
+			var _prop_deg_funcs = _type_builder.DefineProperty (_name, PropertyAttributes.None, typeof (T), Type.EmptyTypes);
+			var _get_field_deg_funcs = _type_builder.DefineMethod ($"get_{_name}", MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig | MethodAttributes.Virtual | MethodAttributes.NewSlot | MethodAttributes.Final, typeof (T), Type.EmptyTypes);
+			var _get_code = _get_field_deg_funcs.GetILGenerator ();
+			var _get_type_from_handle = typeof(Type).GetMethod("GetTypeFromHandle");
+			_get_code.Emit (OpCodes.Ldtoken, typeof (T));
+			_get_code.Emit (OpCodes.Call, _get_type_from_handle);
+			_get_code.Emit (OpCodes.Ret);
+			_prop_deg_funcs.SetGetMethod (_get_field_deg_funcs);
+		}
+
+		// 创建只读属性
+		private static void _add_readonly_property (TypeBuilder _type_builder, string _prop_name, string _prop_value) {
+			var _prop_builder = _type_builder.DefineProperty (_prop_name, PropertyAttributes.None, typeof (string), Type.EmptyTypes);
+			var _method_attr = MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.Virtual;
+			//
+			var _method_builder = _type_builder.DefineMethod ($"get_{_prop_name}" + _prop_name, _method_attr, typeof (string), Type.EmptyTypes);
+			var _code = _method_builder.GetILGenerator ();
+			if (_prop_value == null) {
+				_code.Emit (OpCodes.Ldnull);
+			} else {
+				_code.Emit (OpCodes.Ldstr, _prop_value);
+			}
+			_code.Emit (OpCodes.Ret);
+			//
+			_prop_builder.SetGetMethod (_method_builder);
 		}
 
 		// 创建中转函数
@@ -164,7 +192,7 @@ namespace Fawdlstty.SimpleMS.Private {
 				}
 				if (_param_infos [i].ParameterType.IsValueType)
 					_code.Emit (OpCodes.Box, _param_infos [i].ParameterType);
-				_code.EmitCall (OpCodes.Callvirt, _param_add, new Type [] { typeof (string), typeof (object) });
+				_code.EmitCall (OpCodes.Callvirt, _param_add, null);
 				_param_hash ^= _param_infos [i].ParameterType.GetHashCode ();
 			}
 
@@ -174,7 +202,7 @@ namespace Fawdlstty.SimpleMS.Private {
 			_code.Emit (OpCodes.Ldfld, _field_deg_funcs);
 			_emit_fast_int (_code, _index);
 			var _list_get_Item_deg_func = typeof (List<Func<Dictionary<string, object>, Type, object>>).GetMethod ("get_Item");
-			_code.EmitCall (OpCodes.Callvirt, _list_get_Item_deg_func, new Type [] { typeof (int) });
+			_code.EmitCall (OpCodes.Callvirt, _list_get_Item_deg_func, null);
 			_code.Emit (OpCodes.Stloc, _deg_func);
 
 			// 参数4：返回类型
@@ -183,7 +211,7 @@ namespace Fawdlstty.SimpleMS.Private {
 			_code.Emit (OpCodes.Ldfld, _field_return_types);
 			_emit_fast_int (_code, _index);
 			var _list_get_Item_return_type = typeof (List<Type>).GetMethod ("get_Item");
-			_code.EmitCall (OpCodes.Callvirt, _list_get_Item_return_type, new Type [] { typeof (int) });
+			_code.EmitCall (OpCodes.Callvirt, _list_get_Item_return_type, null);
 			_code.Emit (OpCodes.Stloc, _return_type);
 
 			// 转发请求并返回
@@ -193,7 +221,7 @@ namespace Fawdlstty.SimpleMS.Private {
 			_code.Emit (OpCodes.Ldloc, _deg_func);
 			_code.Emit (OpCodes.Ldloc, _return_type);
 			var _impl_invoke_method = typeof (ImplCaller).GetMethod ("invoke_method");
-			_code.EmitCall (OpCodes.Call, _impl_invoke_method, new Type [] { typeof (string), typeof (string), typeof (Dictionary<string, object>), typeof (Func<Dictionary<string, object>, Type, object>), typeof (Type) });
+			_code.EmitCall (OpCodes.Call, _impl_invoke_method, null);
 			_code.Emit (OpCodes.Ret);
 		}
 
