@@ -20,7 +20,7 @@
     "Example.ServiceA": {
       "commandName": "Project",
       "launchBrowser": true,
-      "launchUrl": "weatherforecast",
+      "launchUrl": "_simplems_/api?module=Example.Interface.IMyService&method=Hello",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },

@@ -9,6 +9,7 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -45,24 +46,36 @@ namespace Fawdlstty.SimpleMS {
 
 						// 获取参数内容
 						var _bytes = new byte [_ctx.Request.ContentLength ?? 0];
-						await _ctx.Request.Body.ReadAsync (_bytes);
-						JObject _param_obj = JObject.Parse (Encoding.UTF8.GetString (_bytes));
-
-						// 生成参数列表并调用
 						var _param_infos = _method.GetParameters ();
 						object [] _params = new object [_param_infos?.Length ?? 0];
-						for (int i = 0; i < _params.Length; ++i)
-							_params [i] = _param_obj [_param_infos [i].Name].ToObject (_param_infos [i].ParameterType);
-						var _ret = _method.Invoke (_obj, _params);
-
-						// 等待函数运行结束并返回
-						if (_method.ReturnType == typeof (Task)) {
-							await (Task) _ret;
-							await _ctx.Response.WriteAsync (JsonConvert.SerializeObject (new { result = "success" }));
-						} else {
-							_ret = await (Task<object>) _ret;
-							await _ctx.Response.WriteAsync (JsonConvert.SerializeObject (_ret));
+						if (_bytes.Length > 0 && _params.Length > 0) {
+							await _ctx.Request.Body.ReadAsync (_bytes);
+							JObject _param_obj = JObject.Parse (Encoding.UTF8.GetString (_bytes));
+							for (int i = 0; i < _params.Length; ++i)
+								_params [i] = _param_obj [_param_infos [i].Name].ToObject (_param_infos [i].ParameterType);
 						}
+
+						// 调用
+						string _resp = "";
+						try {
+							var _ret = _method.Invoke (_obj, _params);
+							if (_method.ReturnType == typeof (Task)) {
+								await (Task) _ret;
+								_resp = JsonConvert.SerializeObject (new { result = "success" });
+							} else {
+								//_ret = await (Task<object>) _ret;
+								////await _ctx.Response.WriteAsync (JsonConvert.SerializeObject (_ret));
+								//var _type = _ret.GetType ();
+								//var _prop_info = _type.GetProperty ("Result");
+								//_ret = _type.InvokeMember ("Result", BindingFlags.GetProperty, null, _ret, Array.Empty<object> ());
+								//_resp = JsonConvert.SerializeObject (_ret);
+								var _type = _ret.GetType ();
+								_type.InvokeMember ("ContinueWith", BindingFlags.InvokeMethod, null, _ret, Array.Empty<object> ());
+							}
+						} catch (Exception ex) {
+							_resp = ex.ToString ();
+						}
+						await _ctx.Response.WriteAsync (_resp);
 					}
 				} else {
 					await _next ();

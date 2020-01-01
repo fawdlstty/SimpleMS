@@ -39,7 +39,7 @@ namespace Fawdlstty.SimpleMS.Private {
 				string _service_name = _type.GetServiceName ();
 
 				// 如果需要，那么搜索本地模块
-				var _type_impls = (from p in _types where p.BaseType == _type select p);
+				var _type_impls = (from p in _types where p.GetInterface (_type.Name) == _type select p);
 				if (_type_impls.Count () > 1)
 					throw new TypeLoadException ("实现 [ServiceMethod] 标注的接口的类最多只能有一个");
 				object _impl_o = null;
@@ -65,11 +65,13 @@ namespace Fawdlstty.SimpleMS.Private {
 
 					// 定义存储降级函数的字段
 					var _deg_funcs = new List<Func<Dictionary<string, object>, Type, Task>> ();
-					var _field_deg_funcs = _type_builder.DefineField ("_faw_field__deg_funcs_", typeof (List<Func<Dictionary<string, object>, Type, object>>), FieldAttributes.Private);
+					//var _field_deg_funcs = _type_builder.DefineField ("_faw_field__deg_funcs_", typeof (List<Func<Dictionary<string, object>, Type, object>>), FieldAttributes.Private);
+					var (_deg_field, _, _) = _add_property<List<Func<Dictionary<string, object>, Type, Task>>> (_type_builder, "_faw_field__deg_funcs_");
 
 					// 定义存储返回类型的字段
 					var _return_types = new List<Type> ();
-					var _field_return_types = _type_builder.DefineField ("_faw_field__return_types_", typeof (List<Type>), FieldAttributes.Private);
+					//var _field_return_types = _type_builder.DefineField ("_faw_field__return_types_", typeof (List<Type>), FieldAttributes.Private);
+					var (_return_field, _, _) = _add_property<List<Type>> (_type_builder, "_faw_field__return_types_");
 
 					// 循环新增新的函数处理
 					_type_builder.AddInterfaceImplementation (_type);
@@ -89,14 +91,14 @@ namespace Fawdlstty.SimpleMS.Private {
 						var _deg_func = _method_infos [i].GetCustomAttribute<ServiceDegradationAttribute> ()?.DegradationFunc;
 						_deg_funcs.Add (_deg_func);
 						_return_types.Add (_method_infos [i].ReturnType);
-						_add_transcall_method (_service_name, _type_builder, _method_infos [i], _field_deg_funcs, _field_return_types, i);
+						_add_transcall_method (_service_name, _type_builder, _method_infos [i], _deg_field, _return_field, i);
 					}
 
 					// 创建实例
 					var _impl_type = _type_builder.CreateType ();
 					_impl_o = Activator.CreateInstance (_impl_type);
-					_impl_type.InvokeMember ("_faw_field__deg_funcs_", BindingFlags.SetProperty, null, _impl_o, new [] { _deg_funcs });
-					_impl_type.InvokeMember ("_faw_field__return_types_", BindingFlags.SetProperty, null, _impl_o, new [] { _return_types });
+					_impl_type.InvokeMember ("_faw_field__deg_funcs_", BindingFlags.SetField, null, _impl_o, new [] { _deg_funcs });
+					_impl_type.InvokeMember ("_faw_field__return_types_", BindingFlags.SetField, null, _impl_o, new [] { _return_types });
 				}
 
 				// 添加进处理对象
@@ -133,32 +135,24 @@ namespace Fawdlstty.SimpleMS.Private {
 		private static List<Type> s_types = new List<Type> ();
 
 		// 创建属性
-		private static void _add_property<T> (TypeBuilder _type_builder, string _name) where T : class {
-			var _prop_deg_funcs = _type_builder.DefineProperty (_name, PropertyAttributes.None, typeof (T), Type.EmptyTypes);
-			var _get_field_deg_funcs = _type_builder.DefineMethod ($"get_{_name}", MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig | MethodAttributes.Virtual | MethodAttributes.NewSlot | MethodAttributes.Final, typeof (T), Type.EmptyTypes);
-			var _get_code = _get_field_deg_funcs.GetILGenerator ();
-			var _get_type_from_handle = typeof(Type).GetMethod("GetTypeFromHandle");
-			_get_code.Emit (OpCodes.Ldtoken, typeof (T));
-			_get_code.Emit (OpCodes.Call, _get_type_from_handle);
-			_get_code.Emit (OpCodes.Ret);
-			_prop_deg_funcs.SetGetMethod (_get_field_deg_funcs);
-		}
-
-		// 创建只读属性
-		private static void _add_readonly_property (TypeBuilder _type_builder, string _prop_name, string _prop_value) {
-			var _prop_builder = _type_builder.DefineProperty (_prop_name, PropertyAttributes.None, typeof (string), Type.EmptyTypes);
-			var _method_attr = MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.Virtual;
-			//
-			var _method_builder = _type_builder.DefineMethod ($"get_{_prop_name}" + _prop_name, _method_attr, typeof (string), Type.EmptyTypes);
-			var _code = _method_builder.GetILGenerator ();
-			if (_prop_value == null) {
-				_code.Emit (OpCodes.Ldnull);
-			} else {
-				_code.Emit (OpCodes.Ldstr, _prop_value);
-			}
-			_code.Emit (OpCodes.Ret);
-			//
-			_prop_builder.SetGetMethod (_method_builder);
+		private static (FieldBuilder, MethodBuilder, MethodBuilder) _add_property<T> (TypeBuilder _type_builder, string _prop_name) {
+			//var _prop_builder = _type_builder.DefineProperty (_prop_name, PropertyAttributes.None, typeof (string), Type.EmptyTypes);
+			var _prop_builder = _type_builder.DefineField (_prop_name, typeof (T), FieldAttributes.Public);
+			//var _method_attr = MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.Virtual;
+			////
+			//var _get_method_builder = _type_builder.DefineMethod ($"get_{_prop_name}", _method_attr, typeof (T), Type.EmptyTypes);
+			//var _get_code = _get_method_builder.GetILGenerator ();
+			//_get_code.Emit (OpCodes.Ldarg_0);
+			//_get_code.Emit (OpCodes.Ldfld, _prop_builder);
+			//_get_code.Emit (OpCodes.Ret);
+			////
+			//var _set_method_builder = _type_builder.DefineMethod ($"set_{_prop_name}", _method_attr, null, new [] { typeof (T) });
+			//var _set_code = _set_method_builder.GetILGenerator ();
+			//_get_code.Emit (OpCodes.Ldarg_0);
+			//_get_code.Emit (OpCodes.Ldarg_1);
+			//_set_code.Emit (OpCodes.Stfld, _prop_builder);
+			//_set_code.Emit (OpCodes.Ret);
+			return (_prop_builder, null, null);
 		}
 
 		// 创建中转函数

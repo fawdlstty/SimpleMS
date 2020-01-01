@@ -7,6 +7,8 @@ namespace Test.Struct {
 	public class TestCaller {
 		private List<Func<Dictionary<string, object>, Type, object>> _deg_func = new List<Func<Dictionary<string, object>, Type, object>> ();
 
+		private List<string> m_items { get; set; }
+
 		public string trans_paramN (int n) {
 			var _param = new Dictionary<string, object> ();
 			_param.Add ("n", n);
