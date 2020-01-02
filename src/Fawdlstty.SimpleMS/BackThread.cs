@@ -14,7 +14,7 @@ namespace Fawdlstty.SimpleMS {
 	/// 此类用于创建后台线程同步本地公共模块
 	/// </summary>
 	internal class BackThread {
-		public static void Start (List<string> local, List<string> remote) {
+		public static void Start (List<string> local, List<string> remote, int port) {
 			if (s_task != null)
 				return;
 
@@ -25,8 +25,8 @@ namespace Fawdlstty.SimpleMS {
 			var _client_factory = _services.GetService<IHttpClientFactory> ();
 
 			// 获取请求内容
-			var _post_query = new StringContent (JToken.FromObject (new { local, remote }).ToString (Formatting.None));
-			var _post = new StringContent (JToken.FromObject (new { local }).ToString (Formatting.None));
+			var _post_query = new StringContent (JToken.FromObject (new { port, local, remote }).ToString (Formatting.None));
+			var _post = new StringContent (JToken.FromObject (new { port, local }).ToString (Formatting.None));
 
 			s_task = Task.Run (async () => {
 				// 生成本地服务描述字符串

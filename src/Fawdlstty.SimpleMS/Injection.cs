@@ -63,14 +63,9 @@ namespace Fawdlstty.SimpleMS {
 								await (Task) _ret;
 								_resp = JsonConvert.SerializeObject (new { result = "success" });
 							} else {
-								//_ret = await (Task<object>) _ret;
-								////await _ctx.Response.WriteAsync (JsonConvert.SerializeObject (_ret));
-								//var _type = _ret.GetType ();
-								//var _prop_info = _type.GetProperty ("Result");
-								//_ret = _type.InvokeMember ("Result", BindingFlags.GetProperty, null, _ret, Array.Empty<object> ());
-								//_resp = JsonConvert.SerializeObject (_ret);
-								var _type = _ret.GetType ();
-								_type.InvokeMember ("ContinueWith", BindingFlags.InvokeMethod, null, _ret, Array.Empty<object> ());
+								await (Task) _ret;
+								_ret = _ret.GetType ().InvokeMember ("Result", BindingFlags.GetProperty, null, _ret, Array.Empty<object> ());
+								_resp = JsonConvert.SerializeObject (_ret);
 							}
 						} catch (Exception ex) {
 							_resp = ex.ToString ();
@@ -98,6 +93,8 @@ namespace Fawdlstty.SimpleMS {
 					await _ctx.Request.Body.ReadAsync (_bytes);
 					JObject _obj = JObject.Parse (Encoding.UTF8.GetString (_bytes));
 					if (_register) {
+						string _host = _ctx.Request.Host.Host;
+						int _port = _obj ["port"].Value<int> ();
 						var _local = _obj ["local"].ToObject<List<string>> ();
 					} else {
 
