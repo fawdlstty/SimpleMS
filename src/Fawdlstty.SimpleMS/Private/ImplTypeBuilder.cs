@@ -23,6 +23,7 @@ namespace Fawdlstty.SimpleMS.Private {
 			} else {
 				throw new NotSupportedException ("请确保 services.AddSimpleMSClient () 与 services.AddSimpleMSService () 一共只被调用一次");
 			}
+			Singletons.Option = _option;
 			List<string> _local = new List<string> (), _remote = new List<string> ();
 
 			// 枚举所有接口
