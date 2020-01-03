@@ -14,16 +14,8 @@ using System.Threading.Tasks;
 
 namespace Fawdlstty.SimpleMS.Private {
 	internal class ImplTypeBuilder {
-		private static bool s_init = true;
-
 		// 初始化接口信息
-		public static (List<string>, List<string>) InitInterfaces (ServiceUpdateOption _option) {
-			if (s_init) {
-				s_init = false;
-			} else {
-				throw new NotSupportedException ("请确保 services.AddSimpleMSClient () 与 services.AddSimpleMSService () 一共只被调用一次");
-			}
-			Singletons.Option = _option;
+		public static (List<string>, List<string>) InitInterfaces () {
 			List<string> _local = new List<string> (), _remote = new List<string> ();
 
 			// 枚举所有接口

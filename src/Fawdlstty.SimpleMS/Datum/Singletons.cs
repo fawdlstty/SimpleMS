@@ -16,18 +16,26 @@ namespace Fawdlstty.SimpleMS.Datum {
 
 		// 远程接口指示类，用于指定某个接口有哪些（微）服务函数地址
 		// 这个对象由Caller函数使用，同时也由网关使用
-		public static Dictionary<string, List<(string, int)>> ServiceAddrs { private get; set; } = new Dictionary<string, List<(string, int)>> ();
+		public static Dictionary<string, List<(string, int)>> OutsideAddrs { private get; set; } = new Dictionary<string, List<(string, int)>> ();
+		public static Dictionary<string, List<(string, int)>> InsideAddrs { private get; set; } = new Dictionary<string, List<(string, int)>> ();
 		public static object ServiceLock { get; } = new object ();
 		private static int s_inc = 0;
+
+		// 是否启用了网关
+		public static bool EnableGateway { get; set; } = false;
 
 		// 调用远程服务
 		public static async Task<string> InvokeRemoteService (string _service_name, string _method_name, string _content) {
 			string _host;
 			int _port;
 			lock (ServiceLock) {
-				if (!ServiceAddrs.TryGetValue (_service_name, out var _addrs))
+				if (InsideAddrs.TryGetValue (_service_name, out var _addrs1)) {
+					(_host, _port) = _addrs1 [++s_inc % _addrs1.Count];
+				} else if (OutsideAddrs.TryGetValue (_service_name, out var _addrs2)) {
+					(_host, _port) = _addrs2 [++s_inc % _addrs2.Count];
+				} else {
 					throw new MethodAccessException ($"服务 {_service_name} 未找到");
-				(_host, _port) = _addrs [++s_inc % _addrs.Count];
+				}
 			}
 			using var _client = _get_client ();
 			using var _str_cnt = new StringContent (_content);

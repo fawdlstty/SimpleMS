@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using Fawdlstty.SimpleMS.Datum;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
@@ -20,12 +21,12 @@ namespace Fawdlstty.SimpleMS.Private {
 		}
 
 		// TODO:
-		private static object _invoke_method_impl (string _service_name, string _method_name, Dictionary<string, object> _params, Type _ret_type) {
-			string _data = JObject.FromObject (_params).ToString ();
-			// if (_ret_type == typeof (Task) || _ret_type.BaseType == typeof (Task))
-			var _ret_type_real = _ret_type == typeof (Task) ? typeof (void) : _ret_type.GenericTypeArguments [0];
-			using var _client = new HttpClient ();
-			//_client.PostAsync ();
+		private static Task<object> _invoke_method_impl (string _service_name, string _method_name, Dictionary<string, object> _params, Type _ret_type) {
+			string _content = JObject.FromObject (_params).ToString ();
+			//var _task = Singletons.InvokeRemoteService (_service_name, _method_name, _content);
+			//_task.ContinueWith ((_arg) => {
+			//	_arg.Result
+			//});
 			return null;
 		}
 	}

@@ -16,12 +16,14 @@ using System.Threading.Tasks;
 namespace Fawdlstty.SimpleMS {
 	public static class Injection {
 		public static IServiceCollection AddSimpleMS (this IServiceCollection services, Action<ServiceUpdateOption> option) {
+			if (Singletons.Option != null)
+				throw new NotSupportedException ("请确保 services.AddSimpleMS () 只被调用一次");
 			var _option = new ServiceUpdateOption ();
 			option?.Invoke (_option);
 			if (_option.LocalPort == 0)
 				throw new ArgumentException ("必须指定本地服务端口号");
 			Singletons.Option = _option;
-			var (_local, _remote) = ImplTypeBuilder.InitInterfaces (_option);
+			var (_local, _remote) = ImplTypeBuilder.InitInterfaces ();
 			BackThread.Start (_local, _remote);
 			return services;
 		}
@@ -53,6 +55,7 @@ namespace Fawdlstty.SimpleMS {
 		public static IApplicationBuilder UseSimpleMSGateway (this IApplicationBuilder app, string prefix = "/api") {
 			if (Singletons.Option.LocalPort == 0)
 				throw new ArgumentException ("必须指定本地服务端口号");
+			Singletons.EnableGateway = true;
 			app.Use (async (_ctx, _next) => {
 				string _path = _ctx.Request.Path.Value;
 				bool _register = _path == "/_simplems_/register", _callmethod = _path.StartsWith (prefix);

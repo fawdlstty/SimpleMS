@@ -42,9 +42,9 @@ namespace Fawdlstty.SimpleMS {
 							var _resp = await _client.PostAsync ($"http://{_addr.Item1}:{_addr.Item2}/_simplems_/register", _update ? _post : _post_query, _cancel.Token);
 							if (!_update) {
 								var _response = await _resp.Content.ReadAsStringAsync ();
-								var _dic = JsonConvert.DeserializeObject<Dictionary<string, List<(string, int)>>> (_response);
+								var _dic_outside = JsonConvert.DeserializeObject<Dictionary<string, List<(string, int)>>> (_response);
 								lock (Singletons.ServiceLock)
-									Singletons.ServiceAddrs = _dic;
+									Singletons.OutsideAddrs = _dic_outside;
 								_update = true;
 							}
 						} catch (Exception) {
@@ -52,6 +52,21 @@ namespace Fawdlstty.SimpleMS {
 					}
 
 					// 更新自己作为网关角色的其他服务信息
+					if (Singletons.EnableGateway) {
+						var _dic_inside = new Dictionary<string, List<(string, int)>> ();
+						lock (s_items) {
+							foreach (var _item in s_items) {
+								foreach (var _module_name in _item.Item4) {
+									if (!_dic_inside.ContainsKey (_module_name))
+										_dic_inside.Add (_module_name, new List<(string, int)> ());
+									if (!_dic_inside [_module_name].Contains ((_item.Item2, _item.Item3)))
+										_dic_inside [_module_name].Add ((_item.Item2, _item.Item3));
+								}
+							}
+						}
+						lock (Singletons.ServiceLock)
+							Singletons.InsideAddrs = _dic_inside;
+					}
 
 					// 延时
 					_dt += Singletons.Option.RefreshTime;
