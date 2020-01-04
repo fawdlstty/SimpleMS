@@ -4,8 +4,8 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -18,11 +18,11 @@ namespace Fawdlstty.SimpleMS {
 			if (s_task != null)
 				return;
 
-			// 获取客户端工厂
-			var _service_collection = new ServiceCollection ();
-			_service_collection.AddHttpClient ();
-			using var _services = _service_collection.BuildServiceProvider ();
-			var _client_factory = _services.GetService<IHttpClientFactory> ();
+			//// 获取客户端工厂
+			//var _service_collection = new ServiceCollection ();
+			//_service_collection.AddHttpClient ();
+			//var _services = _service_collection.BuildServiceProvider ();
+			//var _client_factory = _services.GetService<IHttpClientFactory> ();
 
 			// 获取请求内容
 			int port = Singletons.Option.LocalPort;
@@ -38,7 +38,7 @@ namespace Fawdlstty.SimpleMS {
 					foreach (var _addr in Singletons.Option.GatewayAddrs) {
 						try {
 							var _cancel = new CancellationTokenSource (Singletons.Option.Timeout);
-							using var _client = _client_factory.CreateClient ();
+							using var _client = Singletons._get_client ();
 							var _resp = await _client.PostAsync ($"http://{_addr.Item1}:{_addr.Item2}/_simplems_/register", _update ? _post : _post_query, _cancel.Token);
 							if (!_update) {
 								var _response = await _resp.Content.ReadAsStringAsync ();
@@ -47,7 +47,8 @@ namespace Fawdlstty.SimpleMS {
 									Singletons.OutsideAddrs = _dic_outside;
 								_update = true;
 							}
-						} catch (Exception) {
+						} catch (Exception ex) {
+							Console.WriteLine (ex.Message);
 						}
 					}
 
@@ -55,6 +56,15 @@ namespace Fawdlstty.SimpleMS {
 					if (Singletons.EnableGateway) {
 						var _dic_inside = new Dictionary<string, List<(string, int)>> ();
 						lock (s_items) {
+							var _remove_date = DateTime.Now - Singletons.Option.Timeout - Singletons.Option.RefreshTime;
+							while (true) {
+								var (_date, _host, _port, _) = s_items.Peek ();
+								if (_date > _remove_date)
+									break;
+								if ((from p in s_items where p.Item2 == _host && p.Item3 == _port select 1).Count () < 2)
+									Console.WriteLine ($"Service {_host}:{_port} offline.");
+								s_items.Dequeue ();
+							}
 							foreach (var _item in s_items) {
 								foreach (var _module_name in _item.Item4) {
 									if (!_dic_inside.ContainsKey (_module_name))
@@ -70,30 +80,25 @@ namespace Fawdlstty.SimpleMS {
 
 					// 延时
 					_dt += Singletons.Option.RefreshTime;
-					await Task.Delay (_dt - DateTime.Now);
+					var _now = DateTime.Now;
+					if (_dt > _now) {
+						await Task.Delay (_dt - _now);
+					} else {
+						_dt = _now;
+					}
 				}
 			});
 		}
 
-		public static Dictionary<string, List<(string, int)>> AddService (string host, int port, List<string> local, List<string> remote) {
-			lock (s_items) {
-				s_items.Enqueue ((DateTime.Now, host, port, local));
-				while (s_items.Peek ().Item1 < DateTime.Now - TimeSpan.FromSeconds (15))
-					s_items.Dequeue ();
-				var _dic = new Dictionary<string, List<(string, int)>> ();
-				if ((remote?.Count ?? 0) > 0) {
-					foreach (var _remote_item in remote) {
-						_dic.Add (_remote_item, new List<(string, int)> ());
-					}
-					foreach (var _item in s_items) {
-						foreach (var _dic_item in _dic) {
-							if (_item.Item4.Contains (_dic_item.Key))
-								_dic_item.Value.Add ((_item.Item2, _item.Item3));
-						}
-					}
+		public static Dictionary<string, List<(string, int)>> AddService (string host, int port, List<string> local, List<string> remotes) {
+			if (port > 0) {
+				lock (s_items) {
+					if ((from p in s_items where p.Item2 == host && p.Item3 == port select 1).Count () == 0)
+						Console.WriteLine ($"Service {host}:{port} online.");
+					s_items.Enqueue ((DateTime.Now, host, port, local));
 				}
-				return _dic;
 			}
+			return Singletons.query_addrs (remotes);
 		}
 
 		private static Task s_task = null;

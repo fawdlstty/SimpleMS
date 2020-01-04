@@ -16,6 +16,7 @@ namespace Example.Gateway {
 		public static IHostBuilder CreateHostBuilder (string [] args) =>
 			Host.CreateDefaultBuilder (args)
 				.ConfigureWebHostDefaults (webBuilder => {
+					webBuilder.UseUrls ("http://*:4455");
 					webBuilder.UseStartup<Startup> ();
 				});
 	}

@@ -26,16 +26,33 @@ namespace Fawdlstty.SimpleMS.Datum {
 
 		// 调用远程服务
 		public static async Task<string> InvokeRemoteService (string _service_name, string _method_name, string _content) {
-			string _host;
-			int _port;
+			string _host = "";
+			int _port = 0;
 			lock (ServiceLock) {
-				if (InsideAddrs.TryGetValue (_service_name, out var _addrs1)) {
-					(_host, _port) = _addrs1 [++s_inc % _addrs1.Count];
-				} else if (OutsideAddrs.TryGetValue (_service_name, out var _addrs2)) {
-					(_host, _port) = _addrs2 [++s_inc % _addrs2.Count];
+				if (_service_name.EndsWith (":")) {
+					foreach (var (_key, _val) in InsideAddrs) {
+						if (_key.StartsWith (_service_name)) {
+							(_host, _port) = _val [++s_inc % _val.Count];
+							break;
+						}
+					}
+					if (_port == 0) {
+						foreach (var (_key, _val) in OutsideAddrs) {
+							if (_key.StartsWith (_service_name)) {
+								(_host, _port) = _val [++s_inc % _val.Count];
+								break;
+							}
+						}
+					}
 				} else {
-					throw new MethodAccessException ($"服务 {_service_name} 未找到");
+					if (InsideAddrs.TryGetValue (_service_name, out var _addrs1)) {
+						(_host, _port) = _addrs1 [++s_inc % _addrs1.Count];
+					} else if (OutsideAddrs.TryGetValue (_service_name, out var _addrs2)) {
+						(_host, _port) = _addrs2 [++s_inc % _addrs2.Count];
+					}
 				}
+				if (_port == 0)
+					throw new MethodAccessException ($"服务 {_service_name} 未找到");
 			}
 			using var _client = _get_client ();
 			using var _str_cnt = new StringContent (_content);
@@ -43,8 +60,31 @@ namespace Fawdlstty.SimpleMS.Datum {
 			return await _resp.Content.ReadAsStringAsync ();
 		}
 
+		// 查询本轮服务地址列表
+		public static Dictionary<string, List<(string, int)>> query_addrs (List<string> remotes) {
+			var _dic = new Dictionary<string, List<(string, int)>> ();
+			var _notcatch_remotes = new List<string> ();
+			lock (InsideAddrs) {
+				foreach (var _remote_item in remotes) {
+					if (InsideAddrs.TryGetValue (_remote_item, out var _hosts)) {
+						_dic.Add (_remote_item, _hosts);
+					} else {
+						_notcatch_remotes.Add (_remote_item);
+					}
+				}
+			}
+			lock (OutsideAddrs) {
+				foreach (var _remote_item in _notcatch_remotes) {
+					if (OutsideAddrs.TryGetValue (_remote_item, out var _hosts)) {
+						_dic.Add (_remote_item, _hosts);
+					}
+				}
+			}
+			return _dic;
+		}
+
 		// 获取连接句柄
-		private static HttpClient _get_client () {
+		public static HttpClient _get_client () {
 			lock (s_collection) {
 				if (s_factory == null) {
 					s_collection.AddHttpClient ();

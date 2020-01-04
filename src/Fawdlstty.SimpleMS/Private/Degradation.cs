@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Fawdlstty.SimpleMS.Private {
 	internal class Degradation {
-		public static Task DefaultFunc (Dictionary<string, object> _params, Type _return_type) {
+		public static Task DefaultFunc (Dictionary<string, object> _params, Type _return_type, Exception _ex) {
 			if (_return_type == typeof (void))
 				return Task.CompletedTask;
 			return Task.FromResult<object> (_return_type.BaseType?.FullName switch {

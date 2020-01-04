@@ -10,10 +10,7 @@ namespace Test.Struct {
 		private List<string> m_items { get; set; }
 
 		public string trans_paramN (int n) {
-			var _param = new Dictionary<string, object> ();
-			_param.Add ("n", n);
-			Func<Dictionary<string, object>, Type, object> _deg = _deg_func [n];
-			return (string) TestMethod.TestFunc (_param, _deg, typeof (string));
+			return (string) TestMethod.TestFunc ();
 		}
 	}
 }

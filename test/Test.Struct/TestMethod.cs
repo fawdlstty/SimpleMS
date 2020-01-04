@@ -8,7 +8,7 @@ namespace Test.Struct {
 		public static object BaseFunc (Dictionary<string, object> _param, Type _ret_type) {
 			return (object) "hello world";
 		}
-		public static object TestFunc (Dictionary<string, object> _param, Type _ret_type) {
+		public static object TestFunc () {
 			return Task.FromResult ((object) "hello world");
 		}
 		public static object TestFunc (Dictionary<string, object> _param, Func<Dictionary<string, object>, Type, object> _deg_func, Type _type) {

@@ -1,14 +1,14 @@
-{
+﻿{
   "$schema": "http://json.schemastore.org/launchsettings.json",
   "profiles": {
-    "Example.ServiceA": {
+    "Example.Client": {
       "commandName": "Project",
       "launchBrowser": true,
-      "launchUrl": "_simplems_/api?module=Example.Interface.IMyService&method=Hello",
+      "launchUrl": "api/Test",
+      "applicationUrl": "http://localhost:4456",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
-      },
-      "applicationUrl": "http://localhost:5000"
+      }
     },
     "Docker": {
       "commandName": "Docker",

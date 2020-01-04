@@ -7,11 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace Example.ServiceA {
-	public interface AAA {
-		string name { get; set; }
-	}
-
+namespace Example.Client {
 	public class Program {
 		public static void Main (string [] args) {
 			CreateHostBuilder (args).Build ().Run ();
@@ -20,7 +16,7 @@ namespace Example.ServiceA {
 		public static IHostBuilder CreateHostBuilder (string [] args) =>
 			Host.CreateDefaultBuilder (args)
 				.ConfigureWebHostDefaults (webBuilder => {
-					webBuilder.UseUrls ("http://*:5000");
+					webBuilder.UseUrls ("http://*:4456");
 					webBuilder.UseStartup<Startup> ();
 				});
 	}

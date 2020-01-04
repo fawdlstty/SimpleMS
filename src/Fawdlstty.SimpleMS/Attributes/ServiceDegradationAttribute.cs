@@ -6,6 +6,6 @@ using System.Threading.Tasks;
 
 namespace Fawdlstty.SimpleMS.Attributes {
 	public class ServiceDegradationAttribute: Attribute {
-		public Func<Dictionary<string, object>, Type, Task> DegradationFunc { get; set; } = Degradation.DefaultFunc;
+		public Func<Dictionary<string, object>, Type, Exception, Task> DegradationFunc { get; set; } = Degradation.DefaultFunc;
 	}
 }

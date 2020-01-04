@@ -1,6 +1,7 @@
 ﻿using Fawdlstty.SimpleMS.Attributes;
 using Fawdlstty.SimpleMS.Datum;
 using Fawdlstty.SimpleMS.Options;
+using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
@@ -15,7 +16,7 @@ using System.Threading.Tasks;
 namespace Fawdlstty.SimpleMS.Private {
 	internal class ImplTypeBuilder {
 		// 初始化接口信息
-		public static (List<string>, List<string>) InitInterfaces () {
+		public static (List<string>, List<string>) InitInterfaces (IServiceCollection services) {
 			List<string> _local = new List<string> (), _remote = new List<string> ();
 
 			// 枚举所有接口
@@ -57,14 +58,12 @@ namespace Fawdlstty.SimpleMS.Private {
 					_constructor_builder.GetILGenerator ().Emit (OpCodes.Ret);
 
 					// 定义存储降级函数的字段
-					var _deg_funcs = new List<Func<Dictionary<string, object>, Type, Task>> ();
-					//var _field_deg_funcs = _type_builder.DefineField ("_faw_field__deg_funcs_", typeof (List<Func<Dictionary<string, object>, Type, object>>), FieldAttributes.Private);
-					var (_deg_field, _, _) = _add_property<List<Func<Dictionary<string, object>, Type, Task>>> (_type_builder, "_faw_field__deg_funcs_");
+					var _deg_funcs = new List<Func<Dictionary<string, object>, Type, Exception, Task>> ();
+					var _deg_field = _type_builder.DefineField ("_faw_field__deg_funcs_", typeof (List<Func<Dictionary<string, object>, Type, Exception, Task>>), FieldAttributes.Public);
 
 					// 定义存储返回类型的字段
 					var _return_types = new List<Type> ();
-					//var _field_return_types = _type_builder.DefineField ("_faw_field__return_types_", typeof (List<Type>), FieldAttributes.Private);
-					var (_return_field, _, _) = _add_property<List<Type>> (_type_builder, "_faw_field__return_types_");
+					var _return_field = _type_builder.DefineField ("_faw_field__return_types_", typeof (List<Type>), FieldAttributes.Public);
 
 					// 循环新增新的函数处理
 					_type_builder.AddInterfaceImplementation (_type);
@@ -95,6 +94,7 @@ namespace Fawdlstty.SimpleMS.Private {
 				}
 
 				// 添加进处理对象
+				services.AddSingleton (_type, _impl_o);
 				Singletons.CallerMap.Add ((_service_name, _type), _impl_o);
 			}
 
@@ -127,27 +127,6 @@ namespace Fawdlstty.SimpleMS.Private {
 		private static List<Assembly> s_asms = new List<Assembly> ();
 		private static List<Type> s_types = new List<Type> ();
 
-		// 创建属性
-		private static (FieldBuilder, MethodBuilder, MethodBuilder) _add_property<T> (TypeBuilder _type_builder, string _prop_name) {
-			//var _prop_builder = _type_builder.DefineProperty (_prop_name, PropertyAttributes.None, typeof (string), Type.EmptyTypes);
-			var _prop_builder = _type_builder.DefineField (_prop_name, typeof (T), FieldAttributes.Public);
-			//var _method_attr = MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.Virtual;
-			////
-			//var _get_method_builder = _type_builder.DefineMethod ($"get_{_prop_name}", _method_attr, typeof (T), Type.EmptyTypes);
-			//var _get_code = _get_method_builder.GetILGenerator ();
-			//_get_code.Emit (OpCodes.Ldarg_0);
-			//_get_code.Emit (OpCodes.Ldfld, _prop_builder);
-			//_get_code.Emit (OpCodes.Ret);
-			////
-			//var _set_method_builder = _type_builder.DefineMethod ($"set_{_prop_name}", _method_attr, null, new [] { typeof (T) });
-			//var _set_code = _set_method_builder.GetILGenerator ();
-			//_get_code.Emit (OpCodes.Ldarg_0);
-			//_get_code.Emit (OpCodes.Ldarg_1);
-			//_set_code.Emit (OpCodes.Stfld, _prop_builder);
-			//_set_code.Emit (OpCodes.Ret);
-			return (_prop_builder, null, null);
-		}
-
 		// 创建中转函数
 		private static void _add_transcall_method (string _service_name, TypeBuilder _type_builder, MethodInfo _method_info, FieldBuilder _field_deg_funcs, FieldBuilder _field_return_types, int _index) {
 			var _method_attr = MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Virtual;
@@ -160,7 +139,7 @@ namespace Fawdlstty.SimpleMS.Private {
 			var _map = _code.DeclareLocal (typeof (Dictionary<string, object>));
 			_code.Emit (OpCodes.Newobj, typeof (Dictionary<string, object>).GetConstructor (Type.EmptyTypes));
 			_code.Emit (OpCodes.Stloc, _map);
-			var _param_add = typeof(IDictionary<string, object>).GetMethod("Add", new Type[] { typeof(string), typeof(object) });
+			var _param_add = typeof (IDictionary<string, object>).GetMethod ("Add", new Type [] { typeof (string), typeof (object) });
 			var _param_infos = _method_info.GetParameters ();
 			int _param_hash = _method_info.GetHashCode ();
 			for (int i = 0; i < _param_infos.Length; ++i) {
@@ -188,7 +167,7 @@ namespace Fawdlstty.SimpleMS.Private {
 			_code.Emit (OpCodes.Ldarg_0);
 			_code.Emit (OpCodes.Ldfld, _field_deg_funcs);
 			_emit_fast_int (_code, _index);
-			var _list_get_Item_deg_func = typeof (List<Func<Dictionary<string, object>, Type, object>>).GetMethod ("get_Item");
+			var _list_get_Item_deg_func = typeof (List<Func<Dictionary<string, object>, Type, Exception, object>>).GetMethod ("get_Item");
 			_code.EmitCall (OpCodes.Callvirt, _list_get_Item_deg_func, null);
 			_code.Emit (OpCodes.Stloc, _deg_func);
 

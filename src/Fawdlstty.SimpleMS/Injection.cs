@@ -15,15 +15,13 @@ using System.Threading.Tasks;
 
 namespace Fawdlstty.SimpleMS {
 	public static class Injection {
-		public static IServiceCollection AddSimpleMS (this IServiceCollection services, Action<ServiceUpdateOption> option) {
+		public static IServiceCollection AddSimpleMS (this IServiceCollection services, Action<ServiceUpdateOption> option = null) {
 			if (Singletons.Option != null)
 				throw new NotSupportedException ("请确保 services.AddSimpleMS () 只被调用一次");
 			var _option = new ServiceUpdateOption ();
 			option?.Invoke (_option);
-			if (_option.LocalPort == 0)
-				throw new ArgumentException ("必须指定本地服务端口号");
 			Singletons.Option = _option;
-			var (_local, _remote) = ImplTypeBuilder.InitInterfaces ();
+			var (_local, _remote) = ImplTypeBuilder.InitInterfaces (services);
 			BackThread.Start (_local, _remote);
 			return services;
 		}
@@ -66,7 +64,7 @@ namespace Fawdlstty.SimpleMS {
 						return;
 					}
 					if (_bytes.Length > 0)
-						await _ctx.Request.Body.ReadAsync (_bytes);
+						await _ctx.Request.Body.ReadAsync (_bytes, 0, _bytes.Length);
 					string _resp = "";
 					if (_register) {
 						JObject _obj = JObject.Parse (Encoding.UTF8.GetString (_bytes));
@@ -92,7 +90,8 @@ namespace Fawdlstty.SimpleMS {
 		}
 
 		// 处理外部调用
-		public static async Task<string> _process_method_call (string _module_name, string _method_name, string _content) {
+		private static async Task<string> _process_method_call (string _module_name, string _method_name, string _content) {
+			string _resp = "";
 			// 确认是否能直接调用
 			foreach (var (_key, _obj) in Singletons.CallerMap) {
 				if (!_key.Item1.StartsWith (_module_name))
@@ -111,7 +110,6 @@ namespace Fawdlstty.SimpleMS {
 				}
 
 				// 调用
-				string _resp = "";
 				try {
 					var _ret = _method.Invoke (_obj, _params);
 					if (_method.ReturnType == typeof (Task)) {
@@ -120,16 +118,21 @@ namespace Fawdlstty.SimpleMS {
 					} else {
 						await (Task) _ret;
 						_ret = _ret.GetType ().InvokeMember ("Result", BindingFlags.GetProperty, null, _ret, Array.Empty<object> ());
-						_resp = JsonConvert.SerializeObject (_ret);
+						_resp = JsonConvert.SerializeObject (new { result = "success", content = _ret });
 					}
 				} catch (Exception ex) {
-					_resp = ex.ToString ();
+					_resp = JsonConvert.SerializeObject (new { result = "failure", reason = ex.Message });
 				}
 				return _resp;
 			}
 
 			// 转发调用
-			return await Singletons.InvokeRemoteService (_module_name, _method_name, _content);
+			try {
+				return await Singletons.InvokeRemoteService (_module_name, _method_name, _content);
+			} catch (Exception ex) {
+				_resp = JsonConvert.SerializeObject (new { result = "failure", reason = ex.Message });
+			}
+			return _resp;
 		}
 	}
 }

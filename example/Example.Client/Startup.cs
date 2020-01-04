@@ -11,7 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace Example.Gateway {
+namespace Example.Client {
 	public class Startup {
 		public Startup (IConfiguration configuration) {
 			Configuration = configuration;
@@ -21,14 +21,25 @@ namespace Example.Gateway {
 
 		// This method gets called by the runtime. Use this method to add services to the container.
 		public void ConfigureServices (IServiceCollection services) {
+			services.AddControllers ();
 			services.AddSimpleMS ((_option) => {
-				_option.LocalPort = 4455;
+				_option.GatewayAddrs.Add (("127.0.0.1", 4455));
 			});
 		}
 
 		// This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
 		public void Configure (IApplicationBuilder app, IWebHostEnvironment env) {
-			app.UseSimpleMSGateway ();
+			if (env.IsDevelopment ()) {
+				app.UseDeveloperExceptionPage ();
+			}
+
+			app.UseRouting ();
+
+			app.UseAuthorization ();
+
+			app.UseEndpoints (endpoints => {
+				endpoints.MapControllers ();
+			});
 		}
 	}
 }
