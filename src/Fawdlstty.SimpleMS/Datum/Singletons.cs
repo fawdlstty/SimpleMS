@@ -21,7 +21,8 @@ namespace Fawdlstty.SimpleMS.Datum {
 		public static object ServiceLock { get; } = new object ();
 		private static int s_inc = 0;
 
-		// 是否启用了网关
+		// 是否启用了服务或网关
+		public static bool EnableService { get; set; } = false;
 		public static bool EnableGateway { get; set; } = false;
 
 		// 调用远程服务

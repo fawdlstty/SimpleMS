@@ -22,11 +22,11 @@ namespace Fawdlstty.SimpleMS.Private {
 			// 枚举所有接口
 			var _types = _get_all_types ();
 			foreach (var _type in _types) {
-				var _type_attr = _type.GetCustomAttribute<ServiceMethodAttribute> ();
+				var _type_attr = _type.GetCustomAttribute<SimpleMSServiceAttribute> ();
 				if (_type_attr == null)
 					continue;
 				if (!_type.IsInterface)
-					throw new TypeLoadException ("具有 [ServiceMethod] 标注的类必须为接口类型");
+					throw new TypeLoadException ("具有 [SimpleMSService] 标注的类必须为接口类型");
 
 				// 获取接口服务名称
 				string _name = _type.FullName.Replace ('.', '_');
@@ -35,7 +35,7 @@ namespace Fawdlstty.SimpleMS.Private {
 				// 如果需要，那么搜索本地模块
 				var _type_impls = (from p in _types where p.GetInterface (_type.Name) == _type select p);
 				if (_type_impls.Count () > 1)
-					throw new TypeLoadException ("实现 [ServiceMethod] 标注的接口的类最多只能有一个");
+					throw new TypeLoadException ("实现 [SimpleMSService] 标注的接口的类最多只能有一个");
 				object _impl_o = null;
 				if (_type_impls.Any ()) {
 					// 从本地模块加载
@@ -71,12 +71,12 @@ namespace Fawdlstty.SimpleMS.Private {
 					for (int i = 0; i < _method_infos.Length; ++i) {
 						// 不允许出现getter和setter
 						if (_method_infos [i].Name.StartsWith ("get_") || _method_infos [i].Name.StartsWith ("set_")) {
-							throw new TypeLoadException ("具有 [ServiceMethod] 标注的接口不允许出现 getter/setter 函数 （函数名不允许 get_/set_ 开头）");
+							throw new TypeLoadException ("具有 [SimpleMSService] 标注的接口不允许出现 getter/setter 函数 （函数名不允许 get_/set_ 开头）");
 						}
 
 						// 只提供异步函数
 						if (_method_infos [i].ReturnType != typeof (Task) && _method_infos [i].ReturnType.BaseType != typeof (Task)) {
-							throw new TypeLoadException ($"具有 [ServiceMethod] 标注的接口函数 {_method_infos [i].Name} 返回类型非 Task");
+							throw new TypeLoadException ($"具有 [SimpleMSService] 标注的接口函数 {_method_infos [i].Name} 返回类型非 Task");
 						}
 
 						// 将回调函数与返回类型函数

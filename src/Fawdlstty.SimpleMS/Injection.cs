@@ -30,6 +30,7 @@ namespace Fawdlstty.SimpleMS {
 		public static IApplicationBuilder UseSimpleMSService (this IApplicationBuilder app) {
 			if (Singletons.Option.LocalPort == 0)
 				throw new ArgumentException ("必须指定本地服务端口号");
+			Singletons.EnableService = true;
 			app.Use (async (_ctx, _next) => {
 				if (_ctx.Request.Path == "/_simplems_/api") {
 					string _module_name = _ctx.Request.Query ["module"].ToString ();

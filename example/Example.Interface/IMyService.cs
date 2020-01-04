@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 
 namespace Example.Interface {
-	[ServiceMethod]
+	[SimpleMSService]
 	public interface IMyService {
 		Task<string> Hello ();
 	}

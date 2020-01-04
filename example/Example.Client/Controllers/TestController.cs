@@ -18,8 +18,7 @@ namespace Example.Client.Controllers {
 		[HttpGet]
 		public async Task<string> index () {
 			try {
-				object _o = await _service.Hello ();
-				return (string) _o;
+				return await _service.Hello ();
 			} catch (Exception ex) {
 				return ex.ToString ();
 			}

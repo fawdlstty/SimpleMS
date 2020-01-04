@@ -18,12 +18,6 @@ namespace Fawdlstty.SimpleMS {
 			if (s_task != null)
 				return;
 
-			//// 获取客户端工厂
-			//var _service_collection = new ServiceCollection ();
-			//_service_collection.AddHttpClient ();
-			//var _services = _service_collection.BuildServiceProvider ();
-			//var _client_factory = _services.GetService<IHttpClientFactory> ();
-
 			// 获取请求内容
 			int port = Singletons.Option.LocalPort;
 			var _post_query = new StringContent (JToken.FromObject (new { port, local, remote }).ToString (Formatting.None));
@@ -33,6 +27,10 @@ namespace Fawdlstty.SimpleMS {
 				// 生成本地服务描述字符串
 				var _dt = DateTime.Now;
 				while (true) {
+					// 如果作为服务并且没有注册，那么给与警告
+					if (Singletons.EnableService && !Singletons.EnableGateway && Singletons.Option.GatewayAddrs.Count == 0)
+						Console.WriteLine ("The service is not register to any gateway.");
+
 					// 连接网关注册中心，更新自己作为服务端角色的其他服务信息
 					bool _update = false;
 					foreach (var _addr in Singletons.Option.GatewayAddrs) {
