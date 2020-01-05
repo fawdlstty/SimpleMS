@@ -27,34 +27,41 @@ namespace Fawdlstty.SimpleMS.Datum {
 
 		// 调用远程服务
 		public static async Task<string> InvokeRemoteService (string _service_name, string _method_name, string _content) {
+			// 查询远程服务地址
 			string _host = "";
 			int _port = 0;
-			lock (ServiceLock) {
-				if (_service_name.EndsWith (":")) {
-					foreach (var (_key, _val) in InsideAddrs) {
-						if (_key.StartsWith (_service_name)) {
-							(_host, _port) = _val [++s_inc % _val.Count];
-							break;
-						}
-					}
-					if (_port == 0) {
-						foreach (var (_key, _val) in OutsideAddrs) {
+			if (Option.DiscoveryType == DiscoveryTypeEnum.RegCenter) {
+				lock (ServiceLock) {
+					if (_service_name.EndsWith (":")) {
+						foreach (var (_key, _val) in InsideAddrs) {
 							if (_key.StartsWith (_service_name)) {
 								(_host, _port) = _val [++s_inc % _val.Count];
 								break;
 							}
 						}
-					}
-				} else {
-					if (InsideAddrs.TryGetValue (_service_name, out var _addrs1)) {
-						(_host, _port) = _addrs1 [++s_inc % _addrs1.Count];
-					} else if (OutsideAddrs.TryGetValue (_service_name, out var _addrs2)) {
-						(_host, _port) = _addrs2 [++s_inc % _addrs2.Count];
+						if (_port == 0) {
+							foreach (var (_key, _val) in OutsideAddrs) {
+								if (_key.StartsWith (_service_name)) {
+									(_host, _port) = _val [++s_inc % _val.Count];
+									break;
+								}
+							}
+						}
+					} else {
+						if (InsideAddrs.TryGetValue (_service_name, out var _addrs1)) {
+							(_host, _port) = _addrs1 [++s_inc % _addrs1.Count];
+						} else if (OutsideAddrs.TryGetValue (_service_name, out var _addrs2)) {
+							(_host, _port) = _addrs2 [++s_inc % _addrs2.Count];
+						}
 					}
 				}
-				if (_port == 0)
-					throw new MethodAccessException ($"服务 {_service_name} 未找到");
+			} else if (Option.DiscoveryType == DiscoveryTypeEnum.Custom) {
+				(_host, _port) = Option.GetServiceAddr?.Invoke (_service_name) ?? ("", 0);
 			}
+			if (_host == "" || _port == 0)
+				throw new MethodAccessException ($"服务 {_service_name} 未找到");
+
+			// 调用远程服务
 			using var _client = _get_client ();
 			using var _str_cnt = new StringContent (_content);
 			using var _resp = await _client.PostAsync ($"http://{_host}:{_port}/_simplems_/api?module={_service_name}&method={_method_name}", _str_cnt);

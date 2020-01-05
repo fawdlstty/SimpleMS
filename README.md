@@ -62,8 +62,8 @@ OKOK，此时单体应用已经搭建完毕，启动后浏览器访问 <http://127.0.0.1:5000/api?modu
 public void ConfigureServices (IServiceCollection services) {
     services.AddSimpleMS ((_option) => {
         _option.LocalPort = 5001;
-        // 有一个网关就添加一次；如果有多个网关就添加多个，指定域名与端口号
-        _option.GatewayAddrs.Add (("127.0.0.1", 5000));
+        // 注册中心方式的服务发现必须调用
+        _option.SetRegCenterDiscovery (TimeSpan.FromSeconds (10), TimeSpan.FromSeconds (1), ("127.0.0.1", 5000));
     });
 }
 
@@ -81,13 +81,13 @@ public void Configure (IApplicationBuilder app, IWebHostEnvironment env) {
 
 ```csharp
 public void ConfigureServices (IServiceCollection services) {
-    services.AddControllers ();
-    // 其他的不用修改，在最后面添加一下
+    // 其他的不用修改，在最前面添加一下
     services.AddSimpleMS ((_option) => {
-        //由于我们没有提供网关服务或服务提供者，所以不用指定端口
-        // 客户端依旧需要连接网关来查询服务提供者地址，所以需要指定网关
-        _option.GatewayAddrs.Add (("127.0.0.1", 4455));
+        //由于我们没有提供网关服务或服务提供者，所以不用指定本地服务端口
+        // 注册中心方式的服务发现必须调用
+        _option.SetRegCenterDiscovery (TimeSpan.FromSeconds (10), TimeSpan.FromSeconds (1), ("127.0.0.1", 5000));
     });
+    services.AddControllers ();
 }
 
 // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -118,10 +118,29 @@ public class TestController: ControllerBase {
 
 需要说明两点，一点是，服务全部提供了，可以在需要时直接注入，注意此处注入的服务全部是单例；还有一点是，如果有异常，比如服务提供者没有查询到，或者返回错误，那么会直接抛出异常，需要手工捕获。
 
-这时候一直刷新调用这个接口，就会发现轮询调用了两个服务提供者。假如一个服务提供者下线了，那么过十几秒，然后再一直刷新，就会发现请求的全部是在线的服务了
+这时候一直刷新调用这个接口，就会发现轮询调用了两个服务提供者。假如一个服务提供者下线了，那么过十几秒，然后再一直刷新，就会发现请求的全部是在线的服务了。
+
+另外框架提供自定义服务发现的方式的支持，比如DNS、环境变量服务发现等，只需要将上面 `_option.SetRegCenterDiscovery` 这一行改为：
+
+```csharp
+// 自定义服务发现，根据服务名称获取服务地址及端口，参数有两种格式
+// 示例服务名称：“ExampleProject.IMyService:a385b0b48e760ed8e8167e24141fbbe4”、“ExampleProject.IMyService:”
+//     ExampleProject 为服务接口的命名空间
+//     IMyService 为服务接口名称
+//     a385b0b48e760ed8e8167e24141fbbe4 为服务hash。如果有增删改方法或参数、参数顺序有调整，那么这个值会改变，也可能没有这个值
+// 此处处理是DNS服务发现带环境变量服务发现的方式，需根据实际情况做修改
+_option.SetCustomDiscovery ((_service_name) => {
+    // 将格式化参数为 EXAMPLEPROJECT_IMYSERVICE
+    _service_name = _service_name.Substring (0, _service_name.IndexOf (':')).ToUpper ().Replace (".", "_");
+    // 查询服务地址，此处环境变量格式为“地址:端口”，并指定没查到的情况（地址为空，端口为0）
+    string _ret = Environment.GetEnvironmentVariable (_service_name) ?? ":0";
+    int _split = _ret.IndexOf (':');
+    // 返回服务地址与端口
+    return (_ret.Substring (0, _split), int.Parse (_ret.Substring (_split + 1)));
+});
+```
 
 ## TODO
 
-1. 提供 Kube-DNS 通过域名解析的服务发现方式
-2. 网关提供 swagger 文档
-3. 鉴权
+1. 网关提供 swagger 文档
+2. 鉴权

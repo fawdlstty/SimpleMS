@@ -89,6 +89,8 @@ namespace Fawdlstty.SimpleMS {
 		}
 
 		public static Dictionary<string, List<(string, int)>> AddService (string host, int port, List<string> local, List<string> remotes) {
+			if (Singletons.Option.DiscoveryType != Options.DiscoveryTypeEnum.RegCenter)
+				throw new MethodAccessException ("非注册中心方式不支持添加服务");
 			if (port > 0) {
 				lock (s_items) {
 					if ((from p in s_items where p.Item2 == host && p.Item3 == port select 1).Count () == 0)

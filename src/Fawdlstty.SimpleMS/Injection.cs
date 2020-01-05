@@ -22,7 +22,8 @@ namespace Fawdlstty.SimpleMS {
 			option?.Invoke (_option);
 			Singletons.Option = _option;
 			var (_local, _remote) = ImplTypeBuilder.InitInterfaces (services);
-			BackThread.Start (_local, _remote);
+			if (Singletons.Option.DiscoveryType == DiscoveryTypeEnum.RegCenter)
+				BackThread.Start (_local, _remote);
 			return services;
 		}
 
