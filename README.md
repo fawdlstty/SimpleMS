@@ -102,19 +102,19 @@ public void Configure (IApplicationBuilder app, IWebHostEnvironment env) {
 
 ```csharp
 public class TestController: ControllerBase {
-	private readonly IMyService _service;
-	public TestController (IMyService service) {
-		_service = service;
-	}
+    private readonly IMyService _service;
+    public TestController (IMyService service) {
+        _service = service;
+    }
 
-	[HttpGet]
-	public async Task<string> index () {
-		try {
-			return await _service.Hello ();
-		} catch (Exception ex) {
-			return ex.ToString ();
-		}
-	}
+    [HttpGet]
+    public async Task<string> index () {
+        try {
+            return await _service.Hello ();
+        } catch (Exception ex) {
+            return ex.ToString ();
+        }
+    }
 }
 ```
 
