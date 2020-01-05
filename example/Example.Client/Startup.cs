@@ -24,12 +24,12 @@ namespace Example.Client {
 			services.AddControllers ();
 			services.AddSimpleMS ((_option) => {
 				_option.SetRegCenterDiscovery (TimeSpan.FromSeconds (10), TimeSpan.FromSeconds (1), ("127.0.0.1", 4455));
-				_option.SetCustomDiscovery ((_service_name) => {
-					_service_name = _service_name.Substring (0, _service_name.IndexOf (':')).ToUpper ().Replace (".", "_");
-					string _ret = Environment.GetEnvironmentVariable (_service_name) ?? ":0";
-					int _split = _ret.IndexOf (':');
-					return (_ret.Substring (0, _split), int.Parse (_ret.Substring (_split + 1)));
-				});
+				//_option.SetCustomDiscovery ((_service_name) => {
+				//	_service_name = _service_name.Substring (0, _service_name.IndexOf (':')).ToUpper ().Replace (".", "_");
+				//	string _ret = Environment.GetEnvironmentVariable (_service_name) ?? ":0";
+				//	int _split = _ret.IndexOf (':');
+				//	return (_ret.Substring (0, _split), int.Parse (_ret.Substring (_split + 1)));
+				//});
 			});
 		}
 

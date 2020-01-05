@@ -23,6 +23,7 @@ namespace Example.Gateway {
 		public void ConfigureServices (IServiceCollection services) {
 			services.AddSimpleMS ((_option) => {
 				_option.LocalPort = 4455;
+				_option.SetRegCenterDiscovery (TimeSpan.FromSeconds (10), TimeSpan.FromSeconds (1));
 			});
 		}
 

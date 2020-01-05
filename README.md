@@ -23,6 +23,8 @@ public void ConfigureServices (IServiceCollection services) {
         // 指定本项目 `ASP.Net Core` 对外提供服务的端口
         // 只要是有网关功能，或者需要对外提供服务，那么必需；如果只是服务调用者，没有网关或服务提供，那么不要指定
         _option.LocalPort = 5000;
+        // 指定服务发现方式为注册中心方式，如果没有上级网关那么不需要再指定参数
+        _option.SetRegCenterDiscovery (TimeSpan.FromSeconds (10), TimeSpan.FromSeconds (1));
     });
 }
 
