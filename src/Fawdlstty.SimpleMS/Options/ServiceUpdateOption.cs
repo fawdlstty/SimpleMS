@@ -1,4 +1,5 @@
-﻿using Fawdlstty.SimpleMS.Security;
+﻿using Fawdlstty.SimpleMS.Private;
+using Fawdlstty.SimpleMS.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
@@ -72,9 +73,12 @@ namespace Fawdlstty.SimpleMS.Options {
 		/// <param name="url">接口地址路径，例如http://127.0.0.1:5000</param>
 		public void AddSwagger (string url) {
 			ServicesCollection.AddSwaggerGen ((c) => {
-				c.SwaggerDoc ("web", new Microsoft.OpenApi.Models.OpenApiInfo { Title = "清玖后台服务接口 - Web后台", Version = "web" });
-				c.SwaggerDoc ("wx", new Microsoft.OpenApi.Models.OpenApiInfo { Title = "清玖后台服务接口 - 微信后台", Version = "wx" });
-				c.IncludeXmlComments (Path.Combine (Path.GetDirectoryName (Assembly.GetExecutingAssembly ().Location), "QingjiuServer3.xml"), true);
+				// TODO: 补充完整
+				//c.SwaggerDoc ("web", new OpenApiInfo { Title = "清玖后台服务接口 - Web后台", Version = "web" });
+				//c.SwaggerDoc ("wx", new OpenApiInfo { Title = "清玖后台服务接口 - 微信后台", Version = "wx" });
+				foreach (var _xml_file in PathMethods.GetAllAssemblyXmlFileNames ()) {
+					c.IncludeXmlComments (_xml_file, true);
+				}
 				//c.IgnoreObsoleteActions ();
 				c.AddSecurityDefinition ("Bearer", new OpenApiSecurityScheme {
 					Description = "权限认证",

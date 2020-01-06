@@ -8,6 +8,7 @@ using System.Text.RegularExpressions;
 
 namespace Fawdlstty.SimpleMS.Private {
 	internal class PathMethods {
+		// 获取所有dll文件
 		public static List<string> GetAllAssemblyFileNames () {
 			if (m_asm_files == null) {
 				var _ignores_pattern = string.Format ("^Microsoft\\.\\w*|^System\\.\\w*|^Newtonsoft\\.\\w*");
@@ -17,6 +18,7 @@ namespace Fawdlstty.SimpleMS.Private {
 			return m_asm_files;
 		}
 
+		// 获取所有assembly
 		public static List<Assembly> GetAllAssemblys () {
 			if (s_asms == null) {
 				s_asms = new List<Assembly> ();
@@ -34,6 +36,12 @@ namespace Fawdlstty.SimpleMS.Private {
 			return s_asms;
 		}
 
+		// 获取所有注释文件
+		public static List<string> GetAllAssemblyXmlFileNames () {
+			return (from p in GetAllAssemblyFileNames () let q = $"{p[..^4]}.xml" where File.Exists (q) select q).ToList ();
+		}
+
+		// 获取所有类型
 		public static List<Type> GetAllTypes () {
 			if (s_types == null) {
 				s_types = new List<Type> ();

@@ -33,7 +33,9 @@ namespace Fawdlstty.SimpleMS {
 				throw new ArgumentException ("必须指定本地服务端口号");
 			Singletons.EnableService = true;
 			app.Use (async (_ctx, _next) => {
-				if (_ctx.Request.Path == "/_simplems_/api") {
+				if (_ctx.Request.Path == "/_simplems_/load_dll") {
+					// TODO: 返回dll二进制数据
+				} else if (_ctx.Request.Path == "/_simplems_/api") {
 					string _module_name = _ctx.Request.Query ["module"].ToString ();
 					if (!_module_name.Contains (':'))
 						_module_name = $"{_module_name}:";
