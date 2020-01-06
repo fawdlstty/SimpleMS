@@ -144,5 +144,7 @@ _option.SetCustomDiscovery ((_service_name) => {
 
 ## TODO
 
-1. 网关提供 swagger 文档
+1. 提供 swagger 文档
 2. 鉴权
+3. 消息队列投递方式
+4. skywalking
