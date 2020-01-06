@@ -5,6 +5,7 @@ using Microsoft.OpenApi.Models;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Text;
 
 namespace Fawdlstty.SimpleMS.Options {
@@ -73,7 +74,7 @@ namespace Fawdlstty.SimpleMS.Options {
 			ServicesCollection.AddSwaggerGen ((c) => {
 				c.SwaggerDoc ("web", new Microsoft.OpenApi.Models.OpenApiInfo { Title = "清玖后台服务接口 - Web后台", Version = "web" });
 				c.SwaggerDoc ("wx", new Microsoft.OpenApi.Models.OpenApiInfo { Title = "清玖后台服务接口 - 微信后台", Version = "wx" });
-				c.IncludeXmlComments (Path.Combine (Directory.GetCurrentDirectory (), "QingjiuServer3.xml"), true);
+				c.IncludeXmlComments (Path.Combine (Path.GetDirectoryName (Assembly.GetExecutingAssembly ().Location), "QingjiuServer3.xml"), true);
 				//c.IgnoreObsoleteActions ();
 				c.AddSecurityDefinition ("Bearer", new OpenApiSecurityScheme {
 					Description = "权限认证",

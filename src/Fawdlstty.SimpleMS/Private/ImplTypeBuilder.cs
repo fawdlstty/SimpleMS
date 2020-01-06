@@ -20,7 +20,7 @@ namespace Fawdlstty.SimpleMS.Private {
 			List<string> _local = new List<string> (), _remote = new List<string> ();
 
 			// 枚举所有接口
-			var _types = _get_all_types ();
+			var _types = PathMethods.GetAllTypes ();
 			foreach (var _type in _types) {
 				var _type_attr = _type.GetCustomAttribute<SimpleMSServiceAttribute> ();
 				if (_type_attr == null)
@@ -100,32 +100,6 @@ namespace Fawdlstty.SimpleMS.Private {
 
 			return (_local, _remote);
 		}
-
-		// 获取所有接口
-		private static List<Type> _get_all_types () {
-			var _path = Path.GetDirectoryName (Assembly.GetExecutingAssembly ().Location);
-			var _ignores_pattern = string.Format ("^Microsoft\\.\\w*|^System\\.\\w*|^Newtonsoft\\.\\w*");
-			Regex _ignores = new Regex (_ignores_pattern, RegexOptions.Singleline | RegexOptions.Compiled | RegexOptions.IgnoreCase);
-			var _files = Directory.GetFiles (_path, "*.dll").Select (Path.GetFullPath).Where (a => !_ignores.IsMatch (Path.GetFileName (a))).ToList ();
-			bool _change = false;
-			foreach (var _file in _files) {
-				try {
-					var _asm = Assembly.LoadFrom (_file);
-					if (!s_asms.Contains (_asm)) {
-						_change = true;
-						s_asms.Add (_asm);
-						s_types.AddRange (_asm.GetTypes ());
-					}
-				} catch (Exception) {
-				}
-			}
-			if (_change)
-				s_types = s_types.Distinct ().ToList ();
-			return s_types;
-		}
-
-		private static List<Assembly> s_asms = new List<Assembly> ();
-		private static List<Type> s_types = new List<Type> ();
 
 		// 创建中转函数
 		private static void _add_transcall_method (string _service_name, TypeBuilder _type_builder, MethodInfo _method_info, FieldBuilder _field_deg_funcs, FieldBuilder _field_return_types, int _index) {
