@@ -16,7 +16,7 @@ using System.Threading.Tasks;
 namespace Fawdlstty.SimpleMS.Private {
 	internal class ImplTypeBuilder {
 		// 初始化接口信息
-		public static (List<string>, List<string>) InitInterfaces (IServiceCollection services) {
+		public static (List<string>, List<string>) InitInterfaces () {
 			List<string> _local = new List<string> (), _remote = new List<string> ();
 
 			// 枚举所有接口
@@ -80,7 +80,7 @@ namespace Fawdlstty.SimpleMS.Private {
 						}
 
 						// 将回调函数与返回类型函数
-						var _deg_func = _method_infos [i].GetCustomAttribute<ServiceDegradationAttribute> ()?.DegradationFunc;
+						var _deg_func = _method_infos [i].GetCustomAttribute<MethodDegradationAttribute> ()?.DegradationFunc;
 						_deg_funcs.Add (_deg_func);
 						_return_types.Add (_method_infos [i].ReturnType);
 						_add_transcall_method (_service_name, _type_builder, _method_infos [i], _deg_field, _return_field, i);
@@ -94,7 +94,7 @@ namespace Fawdlstty.SimpleMS.Private {
 				}
 
 				// 添加进处理对象
-				services.AddSingleton (_type, _impl_o);
+				Singletons.Option.ServicesCollection.AddSingleton (_type, _impl_o);
 				Singletons.CallerMap.Add ((_service_name, _type), _impl_o);
 			}
 

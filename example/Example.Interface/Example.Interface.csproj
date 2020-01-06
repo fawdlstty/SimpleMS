@@ -4,8 +4,18 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DocumentationFile>E:\GitHub\_\SimpleMS\example\Example.Interface\Example.Interface.xml</DocumentationFile>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\src\Fawdlstty.SimpleMS\Fawdlstty.SimpleMS.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Example.Interface.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

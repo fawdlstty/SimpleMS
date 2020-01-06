@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Example.Interface</name>
+    </assembly>
+    <members>
+        <member name="T:Example.Interface.IMyService">
+            <summary>
+            测试服务提供类
+            </summary>
+        </member>
+        <member name="M:Example.Interface.IMyService.Hello">
+            <summary>
+            测试方法，返回 hello
+            </summary>
+            <returns></returns>
+        </member>
+    </members>
+</doc>

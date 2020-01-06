@@ -18,10 +18,10 @@ namespace Fawdlstty.SimpleMS {
 		public static IServiceCollection AddSimpleMS (this IServiceCollection services, Action<ServiceUpdateOption> option = null) {
 			if (Singletons.Option != null)
 				throw new NotSupportedException ("请确保 services.AddSimpleMS () 只被调用一次");
-			var _option = new ServiceUpdateOption ();
+			var _option = new ServiceUpdateOption (services);
 			option?.Invoke (_option);
 			Singletons.Option = _option;
-			var (_local, _remote) = ImplTypeBuilder.InitInterfaces (services);
+			var (_local, _remote) = ImplTypeBuilder.InitInterfaces ();
 			if (Singletons.Option.DiscoveryType == DiscoveryTypeEnum.RegCenter)
 				BackThread.Start (_local, _remote);
 			return services;

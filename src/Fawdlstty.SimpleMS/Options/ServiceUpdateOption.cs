@@ -1,11 +1,20 @@
-﻿using System;
+﻿using Fawdlstty.SimpleMS.Security;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.OpenApi.Models;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 
 namespace Fawdlstty.SimpleMS.Options {
 	public enum DiscoveryTypeEnum { None, RegCenter, Custom }
 
 	public class ServiceUpdateOption {
+		public ServiceUpdateOption (IServiceCollection _services) {
+			ServicesCollection = _services;
+		}
+
 		/// <summary>
 		/// 本地服务端口，当对外提供服务或作为网关时必填
 		/// </summary>
@@ -22,6 +31,9 @@ namespace Fawdlstty.SimpleMS.Options {
 
 		// 以下几个为自定义服务发现专用
 		internal Func<string, (string, int)> GetServiceAddr { get; private set; } = null;
+
+		// 以下几个为 swagger 文档专用
+		internal IServiceCollection ServicesCollection { get; private set; } = null;
 
 		/// <summary>
 		/// 设置注册中心方式的服务发现
@@ -51,6 +63,27 @@ namespace Fawdlstty.SimpleMS.Options {
 				throw new MethodAccessException ("不能指定两次服务发现");
 			DiscoveryType = DiscoveryTypeEnum.Custom;
 			GetServiceAddr = get_service_addr;
+		}
+
+		/// <summary>
+		/// 添加 swagger 文档
+		/// </summary>
+		/// <param name="url">接口地址路径，例如http://127.0.0.1:5000</param>
+		public void AddSwagger (string url) {
+			ServicesCollection.AddSwaggerGen ((c) => {
+				c.SwaggerDoc ("web", new Microsoft.OpenApi.Models.OpenApiInfo { Title = "清玖后台服务接口 - Web后台", Version = "web" });
+				c.SwaggerDoc ("wx", new Microsoft.OpenApi.Models.OpenApiInfo { Title = "清玖后台服务接口 - 微信后台", Version = "wx" });
+				c.IncludeXmlComments (Path.Combine (Directory.GetCurrentDirectory (), "QingjiuServer3.xml"), true);
+				//c.IgnoreObsoleteActions ();
+				c.AddSecurityDefinition ("Bearer", new OpenApiSecurityScheme {
+					Description = "权限认证",
+					Name = "Authorization",
+					In = ParameterLocation.Header,
+					Type = SecuritySchemeType.ApiKey,
+					Scheme = JwtBearerDefaults.AuthenticationScheme,
+				});
+				c.OperationFilter<SecurityOperationFilter> ();
+			});
 		}
 	}
 }
